@@ -194,6 +194,7 @@ class Graph {
   bool check_correctness();
   [[nodiscard]] int specific_gate_count(GateType gate_type) const;
   [[nodiscard]] float total_cost() const;
+  [[nodiscard]] float hadamard_reduction_cost() const;
   [[nodiscard]] int gate_count() const;
   [[nodiscard]] int circuit_depth() const;
   size_t get_next_special_op_guid();
@@ -271,7 +272,8 @@ class Graph {
            std::function<float(Graph *)> cost_function = nullptr,
            double timeout = 3600 /*1 hour*/,
            const std::string &store_all_steps_file_prefix = std::string(),
-           bool continue_storing_all_steps = false);
+           bool continue_storing_all_steps = false,
+           const size_t roqc_interval = 0);
   void constant_and_rotation_elimination();
   void rotation_merging(GateType target_rotation);
   [[nodiscard]] std::string to_qasm(bool print_result = false,
@@ -374,6 +376,10 @@ class Graph {
   std::unordered_map<Op, int, OpHash> input_qubit_op_2_qubit_idx;
   std::unordered_map<Pos, int, PosHash> pos_2_logical_qubit;
   std::unordered_map<Op, int, OpHash> param_idx;
+  size_t roqc_countdown{0};
+  float roqc_gates_reduction{0};
+
+  std::shared_ptr<Graph> pre_roqc_graph{nullptr};
 };
 
 }  // namespace quartz

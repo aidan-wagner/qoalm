@@ -61,6 +61,22 @@ install_manifest.txt
 
 # Build
 build/*
+build_non_conda/*
 
 # others
 .DS_Store
+benchmark-logs/
+pickled_results/
+.cache/
+Miniconda3-latest-linux-x86_64.sh
+tmp_*
+
+#py stuff
+pyvoqc/*
+
+# Results
+final_circuits/*
+pickled_results/*
+result_figures/*
+res_*
+

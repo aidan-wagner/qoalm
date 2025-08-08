@@ -3,6 +3,26 @@ project(Quartz)
 
 SET(CMAKE_BUILD_TYPE "Release")
 
+add_compile_definitions(USE_RATIONAL)
+
+include(FetchContent)
+
+
+FetchContent_Declare(
+    Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG v0.5 # Optionally specify a commit hash, version tag or branch here
+)
+# Set any global configuration variables such as `Rust_TOOLCHAIN` before this line!
+FetchContent_MakeAvailable(Corrosion)
+
+message(" Compiler is ${Rust_TOOLCHAIN}")
+corrosion_import_crate(
+    MANIFEST_PATH roqc/Cargo.toml
+    NO_LINKER_OVERRIDE
+)
+
+
 # python
 set(Python_FIND_VIRTUALENV FIRST)
 if (MSVC)
@@ -98,7 +118,7 @@ add_library(quartz_runtime SHARED ${QUARTZ_SRCS})
 
 target_compile_features(quartz_runtime PUBLIC cxx_std_17)
 
-target_link_libraries(quartz_runtime PUBLIC ${QUARTZ_LINK_LIBS})
+target_link_libraries(quartz_runtime PUBLIC ${QUARTZ_LINK_LIBS} PUBLIC roqc)
 
 target_include_directories(quartz_runtime
         PUBLIC ${PROJECT_SOURCE_DIR}/src)
@@ -158,3 +178,4 @@ endif()
 
 add_subdirectory(src/test)
 add_subdirectory(src/benchmark)
+

@@ -1,16 +1,19 @@
 #include "quartz/tasograph/substitution.h"
 #include "quartz/tasograph/tasograph.h"
 #include "test/gen_ecc_set.h"
+#include "utils/utils.h"
 
 using namespace quartz;
 
 int main(int argc, char **argv) {
   std::string input_fn =
-      kQuartzRootPath.string() + "/circuit/nam_circs/barenco_tof_3.qasm";
-  std::string circuit_name = "barenco_tof_3";
+      kQuartzRootPath.string() + "/circuit/nam_circs/adder_8.qasm";
+
+  std::cout << kQuartzRootPath.string() << " " << input_fn << std::endl;
+  std::string circuit_name = "adder_8";
   std::string output_fn;
   std::string eqset_fn =
-      kQuartzRootPath.string() + "/eccset/Nam_3_3_complete_ECC_set.json";
+      kQuartzRootPath.string() + "/eccset/Nam_5_3_complete_ECC_set.json";
 
   if (argc >= 2) {
     assert(argv[1] != nullptr);
@@ -20,6 +23,12 @@ int main(int argc, char **argv) {
       circuit_name = std::string(argv[2]);
     }
   }
+
+    assert(argv[3] != nullptr);
+    assert(argv[4] != nullptr);
+
+    std::size_t timeout = std::stoi(argv[3]);
+    std::size_t roqc_interval = std::stoi(argv[4]);
 
   ParamInfo param_info(/*num_input_symbolic_params=*/2, false);
   Context ctx({GateType::input_qubit, GateType::input_param, GateType::cx,
@@ -33,7 +42,7 @@ int main(int argc, char **argv) {
     // generate ECC set
     gen_ecc_set(
         {GateType::rz, GateType::h, GateType::cx, GateType::x, GateType::add},
-        kQuartzRootPath.string() + "/eccset/Nam_3_3_", true, false, 3, 2, 3);
+        kQuartzRootPath.string() + "/eccset/Nam_5_3_", true, false, 3, 2, 5);
     if (!eqs.load_json(&ctx, eqset_fn,
                        /*from_verifier=*/false)) {
       std::cout << "Failed to load equivalence file." << std::endl;
@@ -47,10 +56,11 @@ int main(int argc, char **argv) {
   std::cout << "number of xfers: " << xfers.size() << std::endl;
 
   auto graph = Graph::from_qasm_file(&ctx, input_fn);
+  std::cout << "got" << std::endl;
   assert(graph);
 
   auto graph_optimized = graph->optimize(xfers, graph->gate_count() * 1.05,
-                                         circuit_name, "", true, nullptr, 10);
+                                         circuit_name, "", true, nullptr, timeout, kQuartzRootPath.string() + "/benchmark-logs/" + circuit_name + "_timeout_" + std::to_string(timeout) + "_roqc_interval_" + std::to_string(roqc_interval) + "_", false, roqc_interval);
   std::cout << "Optimized graph:" << std::endl;
   std::cout << graph_optimized->to_qasm();
   return 0;

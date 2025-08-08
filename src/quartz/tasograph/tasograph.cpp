@@ -5,6 +5,8 @@
 #include <cassert>
 #include <iomanip>
 
+extern "C" const char* run_roqc(const char *circuit_string);
+
 namespace quartz {
 
 // TODO: GUID_PRESERVED depends on the global guid in Context class, need to
@@ -469,6 +471,21 @@ float Graph::total_cost(void) const {
   for (const auto &it : inEdges) {
     if (it.first.ptr->is_quantum_gate())
       cnt++;
+  }
+  return (float)cnt;
+}
+
+float Graph::hadamard_reduction_cost(void) const {
+  // Uncomment to use circuit depth as the cost
+  // return circuit_depth();
+  size_t cnt = 0;
+  for (const auto &it : inEdges) {
+    if (it.first.ptr->is_quantum_gate()) {
+      cnt++;
+      if (it.first.ptr->tp == GateType::h) {
+        cnt--;
+      }
+    }
   }
   return (float)cnt;
 }
@@ -1945,9 +1962,11 @@ Graph::optimize(const std::vector<GraphXfer *> &xfers, double cost_upper_bound,
                 const std::string &log_file_name, bool print_message,
                 std::function<float(Graph *)> cost_function, double timeout,
                 const std::string &store_all_steps_file_prefix,
-                bool continue_storing_all_steps) {
+                bool continue_storing_all_steps,
+                const size_t roqc_interval) {
   if (cost_function == nullptr) {
-    cost_function = [](Graph *graph) { return graph->total_cost(); };
+    //cost_function = [](Graph *graph) { return graph->total_cost(); };
+    cost_function = [](Graph *graph) {return graph->hadamard_reduction_cost(); };
   }
   auto start = std::chrono::steady_clock::now();
   std::priority_queue<std::shared_ptr<Graph>,
@@ -2057,6 +2076,17 @@ Graph::optimize(const std::vector<GraphXfer *> &xfers, double cost_upper_bound,
         if (new_graph == nullptr)
           continue;
 
+        // If a certain number of iterations have occured, then run roqc
+        if (new_graph->roqc_countdown == roqc_interval) {
+          float pre_roqc_cost{cost_function(new_graph.get())};
+          auto pre_roqc_graph = new_graph;
+          new_graph = new_graph->from_qasm_str(graph->context, run_roqc(new_graph->to_qasm().c_str()));
+          new_graph->roqc_gates_reduction = pre_roqc_cost - cost_function(new_graph.get());
+          new_graph->roqc_countdown = 0;
+          new_graph->pre_roqc_graph = pre_roqc_graph;
+          // std::cout << "costs: " << pre_roqc_cost << " <> " << new_graph->roqc_gates_reduction << " <> " << cost_function(new_graph.get()) << std::endl;
+        }
+
         auto new_hash = new_graph->hash();
         auto new_cost = cost_function(new_graph.get());
         if (new_cost > cost_upper_bound)
@@ -2101,22 +2131,41 @@ Graph::optimize(const std::vector<GraphXfer *> &xfers, double cost_upper_bound,
   }
 
   if (!store_all_steps_file_prefix.empty()) {
+    std::cout << "writing" << std::endl;
     std::vector<Graph *> steps(1, best_graph.get());
     while (previous_graph.count(steps.back()) > 0) {
       // there is a previous graph
       steps.push_back(previous_graph[steps.back()].get());
     }
     // no need to save the initial graph again
+    float total_roqc_reduction{0.0};
+    float initial_cost{cost_function(steps.back())};
+    std::cout << "initial cost: " << initial_cost << std::endl;
     for (int i = (int)steps.size() - 2; i >= 0; i--) {
       step_count++;
       steps[i]->to_qasm(store_all_steps_file_prefix +
                             std::to_string(step_count) + ".qasm",
                         /*print_result=*/false,
                         /*print_guid=*/false);
+      if (steps[i]->roqc_gates_reduction > 0) {
+        total_roqc_reduction += steps[i]->roqc_gates_reduction;
+        std::ofstream roqc_out(store_all_steps_file_prefix + std::to_string(step_count) + "_roqc_reduction.txt");
+        roqc_out << steps[i]->roqc_gates_reduction << " at step " << step_count << std::endl;
+        roqc_out.close();
+      }
+
+      // If a graph has a pre_roqc_graph, then we want to write this as well for tracing the circuit transformation steps
+
+      if (steps[i]->pre_roqc_graph != nullptr) {
+        steps[i]->pre_roqc_graph->to_qasm(store_all_steps_file_prefix + std::to_string(step_count) + "_pre_roqc_graph.qasm", false, false);
+      }
     }
 
     // Store the number of steps.
     std::ofstream fout_step(store_all_steps_file_prefix + ".txt");
+    std::cout << initial_cost << " " << best_cost << std::endl;
+    fout_step << "total roqc reduction: " << total_roqc_reduction << std::endl;
+    fout_step << "total reduction: " << initial_cost - best_cost << std::endl;
     fout_step << step_count << std::endl;
     fout_step.close();
   }
@@ -2491,6 +2540,7 @@ std::shared_ptr<Graph> Graph::apply_xfer(GraphXfer *xfer, Op op,
   if (success) {
     if (eliminate_rotation) {
       new_graph->constant_and_rotation_elimination();
+      new_graph->roqc_countdown = this->roqc_countdown + 1;
     }
   }
   // Pattern matching succeed, unmatch mapped nodes.
