@@ -70,6 +70,7 @@ pickled_results/
 .cache/
 Miniconda3-latest-linux-x86_64.sh
 tmp_*
+scratch
 
 #py stuff
 pyvoqc/*
