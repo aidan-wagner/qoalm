@@ -7,6 +7,7 @@ Ensure that you are in the qalm base directory
 Build and Run the docker container:
 
 `sudo docker build -t qalm_testing .`
+
 `sudo docker run -it .`
 
 ### Install Rust:
@@ -22,9 +23,13 @@ Enter 1 for default install
 ### Build Qalm
 
 `mkdir build_docker`
+
 `cd build_docker`
+
 `cmake ..`
+
 `make`
+
 `cd ..`
 
 ## Running Qalm Benchmarks
@@ -39,9 +44,11 @@ Select which circuit list you would like to run in qalm_experiments/run_qalm_exp
 Begin in the home directory
 
 To run small test:
+
 `./qalm_bench_test.sh`
 
 To run full test:
+
 `./qalm_bench_full.sh`
 
 To alter the timeout for either, edit line timeout in the script. Default value is 60 seconds
