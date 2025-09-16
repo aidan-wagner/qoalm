@@ -22,6 +22,8 @@ Enter 1 for default install
 
 ### Build Qalm
 
+`cd qalm`
+
 `mkdir build_docker`
 
 `cd build_docker`
@@ -38,6 +40,16 @@ Set the desired runtime in qalm_experiments/run_qalm_experiments.py
 Select which circuit list you would like to run in qalm_experiments/run_qalm_experiments.py
 
 `python qalm_experiments/run_qalm_experiments.py`
+
+## Running Repeated ROQC Benchmarks
+
+Run full benchmarks:
+
+`python qalm_experiments/repeated_roqc_tests.py ../qalm_circuits_full.txt`
+
+Run test benchmarks:
+
+`python qalm_experiments/repeated_roqc_tests.py ../qalm_circuits_test.txt`
 
 ## Running Other Benchamrks
 

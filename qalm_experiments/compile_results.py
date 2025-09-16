@@ -16,6 +16,7 @@ def process_results():
     total_results["qiskit_results"] = []
     total_results["guoq_results"] = []
     total_results["queso_results"] = []
+    total_results["repeated_roqc_results"] = []
 
     with open("qalm_circuits_test.txt", "r") as f:
         circuit_list = [line.split("/")[-1].strip().split(".")[0] for line in f.readlines()]
@@ -34,13 +35,15 @@ def process_results():
         r_guoq = parse_guoq(circuit)
         r_qiskit = parse_qiskit(circuit)
         r_voqc = parse_voqc(circuit)
+        r_repeated_roqc = parse_repeated_roqc(circuit)
 
         total_results["qiskit_results"].append(r_qiskit)
         total_results["guoq_results"].append(r_guoq)
         total_results["queso_results"].append(r_queso)
         total_results["voqc_results"].append(r_voqc)
+        total_results["repeated_roqc_results"].append(r_repeated_roqc)
 
-    opt_order = ["qalm_1", "qalm_5","qalm_50", "qalm_100", "qalm_0", "voqc", "qiskit", "guoq", "queso"]
+    opt_order = ["qalm_1", "qalm_5","qalm_50", "qalm_100", "qalm_0", "voqc", "qiskit", "guoq", "queso", "repeated_roqc"]
 
     fields = ["Optimizer Name"] + circuit_list
     all_data = []
@@ -94,6 +97,10 @@ def parse_voqc(circuit_name):
         result_dict = json.load(f)
     return result_dict["optimized_total"]
 
+def parse_repeated_roqc(circuit_name):
+    result_file = f"fresh_results/qalm_bench/nam/repeated_roqc/{circuit_name}.qasm.roqc"
+    c = QuantumCircuit.from_qasm_file(result_file)
+    return c.size()
 
 if __name__ == '__main__' :
     process_results()

@@ -8,6 +8,7 @@ def run_experiments(circuit_list_file):
         for circuit_name in f:
             circuit_files.append(circuit_name)
 
+    static_circuit_files = circuit_files.copy()
 
     results = {}
 
@@ -34,7 +35,12 @@ def run_experiments(circuit_list_file):
                     print(f"Found additional improvement for {circuit_file}:", results[circuit_file], "->", final_length)
                     results[circuit_file] = final_length
 
-    print(results)
+    if not os.path.exists("../fresh_results/qalm/nam/repeated_roqc"):
+        os.makedirs("../fresh_results/qalm/nam/repeated_roqc")
+
+    for circuit_file in static_circuit_files:
+        os.rename(circuit_file.strip() + ".roqc", "../fresh_results/qalm_bench/nam/repeated_roqc/" + circuit_file.strip().split("/")[-1] + ".roqc")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -45,3 +51,4 @@ if __name__ == '__main__':
     print(args.filename)
 
     run_experiments(args.filename)
+
