@@ -20,8 +20,6 @@ def run_experiments(circuit_list_file):
                 final_length = int(line.strip().split()[-1])
         results[circuit_file] = final_length
     
-    print(results)
-
     # Repeat
     for circuit_file in circuit_files:
         res = subprocess.run(["./roqc/target/release/roqc", circuit_file.strip() + ".roqc"], capture_output = True, text = True)
